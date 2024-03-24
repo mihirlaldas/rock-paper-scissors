@@ -1,6 +1,6 @@
 # Rock paper scissors spock lizard game on Ethereum
 
-a web3 website to play this extended version of rock paper scissors (See wikipedia article about RPS and additional weapons).
+a web3 website to play this extended version of rock paper scissors .
 
 - It should allow a party to create a RPS game.
 - The first party creates the game, puts a commitment of his move, selects the other player and stakes some ETH.
