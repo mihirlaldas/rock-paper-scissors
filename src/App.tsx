@@ -3,6 +3,7 @@ import { BrowserProvider, Eip1193Provider, ethers } from "ethers";
 import Contract from "./utils/RPS.json";
 import Hasher from "./utils/Hasher.json";
 import "./App.css";
+import { useLocalStorage } from "./hook/useLocalstorage";
 declare global {
   interface Window {
     ethereum: Eip1193Provider & BrowserProvider;
@@ -11,7 +12,11 @@ declare global {
 function App() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [otherPlayerAddress, setOtherPlayerAddress] = useState("");
-  const [rpsContractAddress, setRpsContractAddress] = useState("");
+  const [joinGameAddress, setJoinGameAddress] = useState("");
+  const [rpsContractAddress, setRpsContractAddress] = useLocalStorage(
+    "rpsContractAddress",
+    ""
+  );
   // TODO: use salt generator
   const salt =
     "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6";
@@ -36,40 +41,16 @@ function App() {
     }
   };
 
-  const isWalletConnected = async () => {
-    try {
-      const { ethereum } = window;
-      if (ethereum) {
-        console.log("We have the ethereum object", ethereum);
-      } else {
-        console.log("Make sure you have metamask!");
-      }
-
-      const accounts = await ethereum.request({ method: "eth_accounts" });
-      if (accounts.length !== 0) {
-        const account = accounts[0];
-        console.log("Found an authorized account:", account);
-        setCurrentAccount(account);
-        return true;
-      } else {
-        console.log("No authorized account found");
-        return false;
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const deployRPSContract = async () => {
     const contractABI = Contract.abi;
     const byteCode = Contract.data.bytecode.object;
     const HasherABI = Hasher.abi;
     // TODO: use actual deployed address
-    const hasherContractAddress = "0x261d8c5e9742e6f7f1076fa1f560894524e19cad";
+    const hasherContractAddress = "0x057ef64E23666F000b34aE31332854aCBd1c8544";
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-
       const signer = await provider.getSigner();
+
       const hasherContract = new ethers.Contract(
         hasherContractAddress,
         HasherABI,
@@ -94,7 +75,7 @@ function App() {
 
     try {
       const contract = new ethers.Contract(
-        rpsContractAddress,
+        joinGameAddress,
         Contract.abi,
         signer
       );
@@ -108,6 +89,8 @@ function App() {
       console.log("play funcation call error:", error);
     }
   };
+
+  // player 1 - J1 invokes this function after J2 has played
   const solve = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -125,35 +108,32 @@ function App() {
     }
     setRpsContractAddress("");
   };
+
   return (
     <>
       <h1>Rock paper scissors spock lizard</h1>
       <div className="read-the-docs">
         {rpsContractAddress.length > 0 && (
-          <p>Active Game address: {rpsContractAddress} </p>
+          <>
+            <p>Active Game address: {rpsContractAddress} </p>
+
+            <button onClick={solve}>Solve</button>
+          </>
         )}
-        {/* {hasherContractAddress.length > 0 && (
-          <p>`Hasher contract address: ${hasherContractAddress}`</p>
-        )} */}
       </div>
       <div className="card">
-        {!isWalletConnected && (
+        {!currentAccount && (
           <button onClick={connectWallet}>Connect Wallet</button>
         )}
-        {currentAccount && (
+        {currentAccount && rpsContractAddress.length == 0 && (
           <div>
             <p>Join Game</p>
             <input
               type="text"
-              value={rpsContractAddress}
-              onChange={(e) => setRpsContractAddress(e.target.value)}
+              value={joinGameAddress}
+              onChange={(e) => setJoinGameAddress(e.target.value)}
             />
             <button onClick={p2Play}>Join</button>
-          </div>
-        )}
-
-        {currentAccount && (
-          <div>
             <h3>Create new game</h3>
             <input
               type="text"
@@ -161,11 +141,9 @@ function App() {
               onChange={(e) => setOtherPlayerAddress(e.target.value)}
             />
             <button onClick={deployRPSContract}>Create Game</button>
+            <p>Only on ethereum testnet - Sepolia</p>
           </div>
         )}
-
-        <p>Only on ethereum testnet - Sepolia</p>
-        {rpsContractAddress && <button onClick={solve}>Solve</button>}
       </div>
     </>
   );
