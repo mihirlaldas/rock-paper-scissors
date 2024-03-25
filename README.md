@@ -1,5 +1,6 @@
 # Rock paper scissors spock lizard game on Ethereum
 
+https://rpssl.netlify.app/
 a web3 website to play this extended version of rock paper scissors .
 
 - It should allow a party to create a RPS game.
@@ -9,3 +10,8 @@ a web3 website to play this extended version of rock paper scissors .
 - If some party stops responding there are some timeouts.
 
 You can find the smart contract here: https://github.com/clesaege/RPS/blob/master/RPS.sol .
+
+## Video Demo
+
+- [fast demo on hardhat local](https://youtu.be/DWcKYy0ZAQ8)
+- [sepolia demo](https://youtu.be/8CkyZpqjAs0)
