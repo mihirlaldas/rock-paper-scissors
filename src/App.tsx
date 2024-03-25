@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrowserProvider, Eip1193Provider, ethers } from "ethers";
 import Contract from "./utils/RPS.json";
 import Hasher from "./utils/Hasher.json";
@@ -26,13 +26,7 @@ function App() {
     "rpsContractAddress",
     ""
   );
-  // TODO: use salt generator
-  const salt =
-    "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6";
-  useEffect(() => {
-    if (currentAccount.length > 0) {
-    }
-  }, [currentAccount]);
+  const [salt, setsalt] = useLocalStorage("salt", "");
 
   const connectWallet = async () => {
     try {
@@ -58,6 +52,8 @@ function App() {
   };
 
   const deployRPSContract = async () => {
+    const newSalt = ethers.toBigInt(ethers.randomBytes(32)).toString();
+    setsalt(newSalt);
     const contractABI = Contract.abi;
     const byteCode = Contract.data.bytecode.object;
     const HasherABI = Hasher.abi;
@@ -72,7 +68,7 @@ function App() {
         HasherABI,
         signer
       );
-      const c1Hashed = await hasherContract.hash(selectedMove, salt);
+      const c1Hashed = await hasherContract.hash(selectedMove, newSalt);
       const factory = new ethers.ContractFactory(contractABI, byteCode, signer);
       const contract = await factory.deploy(c1Hashed, otherPlayerAddress, {
         value: ethers.parseEther("1"),
@@ -155,6 +151,7 @@ function App() {
               <button
                 onClick={() => {
                   setShowResult(true);
+                  setSelectedMove(null);
                   getResultBalance();
                 }}
               >
@@ -173,7 +170,9 @@ function App() {
                     setShowResult(false);
                     setIsGameOn(false);
                     setRpsContractAddress("");
+                    setsalt("");
                     setResultBalance("");
+                    window.location.reload();
                   }}
                 >
                   Close and start new game
