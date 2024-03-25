@@ -10,7 +10,6 @@ export default function Winner({ prevBalance, currentBalance, stake }: Props) {
   let pastBalance = to2decimalPlaces(prevBalance);
   let parsedCurrentBalance = to2decimalPlaces(currentBalance);
   let parsedStake = to2decimalPlaces(stake);
-  console.log(parsedCurrentBalance, pastBalance, parsedStake);
   let result: string;
   if (parsedCurrentBalance > pastBalance) {
     result = "You win !! ETH : " + parsedStake * 2;

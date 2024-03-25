@@ -54,8 +54,8 @@ function App() {
     const contractABI = Contract.abi;
     const byteCode = Contract.data.bytecode.object;
     const HasherABI = Hasher.abi;
-    // TODO: use actual deployed address
-    const hasherContractAddress = "0x057ef64E23666F000b34aE31332854aCBd1c8544";
+    // deployed to sepolia testnet
+    const hasherContractAddress = "0x0101d117eE0116a40467D6D97D871dE86FC8c641";
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
