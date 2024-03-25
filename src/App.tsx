@@ -48,7 +48,6 @@ function App() {
       console.log(error);
     }
   };
-  console.log(import.meta.env.VITE_DUMMY);
   const deployRPSContract = async () => {
     const newSalt = ethers.toBigInt(ethers.randomBytes(32)).toString();
     setsalt(newSalt);
