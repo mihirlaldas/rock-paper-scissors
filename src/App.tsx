@@ -7,6 +7,7 @@ import { useLocalStorage } from "./hook/useLocalstorage";
 import MovePicker from "./components/MovePicker";
 import { icons, names } from "./utils/fixtures";
 import Winner from "./components/Winner";
+
 declare global {
   interface Window {
     ethereum: Eip1193Provider & BrowserProvider;
@@ -47,7 +48,7 @@ function App() {
       console.log(error);
     }
   };
-
+  console.log(import.meta.env.VITE_DUMMY);
   const deployRPSContract = async () => {
     const newSalt = ethers.toBigInt(ethers.randomBytes(32)).toString();
     setsalt(newSalt);
@@ -55,7 +56,7 @@ function App() {
     const byteCode = Contract.data.bytecode.object;
     const HasherABI = Hasher.abi;
     // deployed to sepolia testnet
-    const hasherContractAddress = "0x0101d117eE0116a40467D6D97D871dE86FC8c641";
+    const hasherContractAddress = import.meta.env.VITE_HASHER_ADDRESS;
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
