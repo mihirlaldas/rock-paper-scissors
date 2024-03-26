@@ -121,12 +121,7 @@ function App() {
   };
 
   function reset() {
-    setShowResult(false);
-    setIsGameOn(false);
-    setRpsContractAddress("");
     setsalt("");
-    setResultBalance("");
-    setCanShowResultBTn(false);
     window.location.reload();
   }
   // player 1 - J1 invokes this function after J2 has played
