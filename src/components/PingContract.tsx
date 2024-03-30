@@ -21,11 +21,13 @@ type Props = {
 
   setIsWaitingForPlayer1ToSolve: React.Dispatch<React.SetStateAction<boolean>>;
   setIsGameSolved: React.Dispatch<React.SetStateAction<boolean>>;
+  solve: () => void;
 };
 function PingContract({
   contractAddress,
   setIsGameSolved,
   setIsWaitingForPlayer1ToSolve,
+  solve,
 }: Props) {
   const [data, setData] = useState<ContractData>(initialData);
   async function getData() {
@@ -47,18 +49,23 @@ function PingContract({
   const isWaitingForPlayer2 = !data?.c2;
   const isWaitingForPlayer1ToSolve = data?.c2 && data?.stake > 0;
   const isGameSolved = data?.c2 && data?.stake === 0;
-  if (isWaitingForPlayer1ToSolve) {
-    setIsWaitingForPlayer1ToSolve(true);
-  }
-  if (isGameSolved) {
-    setIsGameSolved(true);
-  }
+  //   if (isWaitingForPlayer1ToSolve) {
+  //     setIsWaitingForPlayer1ToSolve(true);
+  //   }
+
+  useEffect(() => {
+    if (isWaitingForPlayer1ToSolve) {
+      setIsWaitingForPlayer1ToSolve(true);
+    }
+  }, [isWaitingForPlayer1ToSolve]);
+
   // polling for data
   useEffect(() => {
     if (!isGameSolved) {
-      const timer = setInterval(getData, 1000);
+      const timer = setInterval(getData, 2000);
       return () => clearInterval(timer);
     }
+    setIsGameSolved(true);
   }, [isGameSolved]);
 
   return (
@@ -76,6 +83,7 @@ function PingContract({
       {isWaitingForPlayer1ToSolve && (
         <>
           <p>Waiting for Player 1 to solve</p>
+          <button onClick={solve}>Solve</button>
         </>
       )}
     </div>
