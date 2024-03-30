@@ -3,9 +3,31 @@ import Contract from "../utils/RPS.json";
 
 import { useEffect, useState } from "react";
 
-function PingContract({ contractAddress }: { contractAddress: string }) {
-  const [data, setData] = useState({});
+type ContractData = {
+  stake: number;
+  j1: string;
+  j2: string;
+  c2: number | null;
+};
+const initialData: ContractData = {
+  stake: 0,
+  j1: "",
+  j2: "",
+  c2: null,
+};
 
+type Props = {
+  contractAddress: string;
+
+  setIsWaitingForPlayer1ToSolve: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsGameSolved: React.Dispatch<React.SetStateAction<boolean>>;
+};
+function PingContract({
+  contractAddress,
+  setIsGameSolved,
+  setIsWaitingForPlayer1ToSolve,
+}: Props) {
+  const [data, setData] = useState<ContractData>(initialData);
   async function getData() {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -14,6 +36,7 @@ function PingContract({ contractAddress }: { contractAddress: string }) {
       Contract.abi,
       signer
     );
+
     const stake = parseFloat(ethers.formatEther(await rpsContract.stake()));
     const j1 = await rpsContract.j1();
     const j2 = await rpsContract.j2();
@@ -21,15 +44,23 @@ function PingContract({ contractAddress }: { contractAddress: string }) {
 
     setData({ j1, j2, stake, c2 });
   }
-  // polling for data
-  useEffect(() => {
-    const timer = setInterval(getData, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const isWaitingForPlayer2 = !data?.c2;
   const isWaitingForPlayer1ToSolve = data?.c2 && data?.stake > 0;
   const isGameSolved = data?.c2 && data?.stake === 0;
+  if (isWaitingForPlayer1ToSolve) {
+    setIsWaitingForPlayer1ToSolve(true);
+  }
+  if (isGameSolved) {
+    setIsGameSolved(true);
+  }
+  // polling for data
+  useEffect(() => {
+    if (!isGameSolved) {
+      const timer = setInterval(getData, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isGameSolved]);
+
   return (
     <div>
       <h3>Contract data:</h3>
@@ -47,7 +78,6 @@ function PingContract({ contractAddress }: { contractAddress: string }) {
           <p>Waiting for Player 1 to solve</p>
         </>
       )}
-      {isGameSolved && <p>Game is solved</p>}
     </div>
   );
 }

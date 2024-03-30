@@ -6,7 +6,7 @@ import "./App.css";
 import { useLocalStorage } from "./hook/useLocalstorage";
 import MovePicker from "./components/MovePicker";
 import { icons, names } from "./utils/fixtures";
-import Winner from "./components/Winner";
+import Winner, { to2decimalPlaces } from "./components/Winner";
 import PingContract from "./components/PingContract";
 
 declare global {
@@ -16,8 +16,7 @@ declare global {
 }
 function App() {
   const [currentAccount, setCurrentAccount] = useState("");
-  const [accountBalance, setAccoutnBalance] = useState("");
-  const [resultBalance, setResultBalance] = useState("");
+  const [currentBalance, setCurrentBalance] = useState("");
   const [otherPlayerAddress, setOtherPlayerAddress] = useState("");
   const [joinGameAddress, setJoinGameAddress] = useState("");
   const [selectedMove, setSelectedMove] = useState<number | null>(null);
@@ -27,7 +26,15 @@ function App() {
   const [rpsContractAddress, setRpsContractAddress] = useState("");
   const [salt, setsalt] = useLocalStorage("salt", "");
   const [stakeForGame, setStakeForGame] = useState("");
+  const [isGameSolved, setIsGameSolved] = useState(false);
+  const [isWaitingForPlayer1ToSolve, setIsWaitingForPlayer1ToSolve] =
+    useState(false);
+  const [startingBalance, setStartingBalance] = useLocalStorage(
+    "starting-balance",
+    ""
+  );
 
+  const [stakedAmount, setStakedAmount] = useLocalStorage("staked-amount", "");
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -47,14 +54,15 @@ function App() {
       const balance = await provider.getBalance(accounts[0]);
       provider.on("block", async () => {
         const newBalance = await provider.getBalance(accounts[0]);
-        setAccoutnBalance(ethers.formatEther(newBalance));
+        setCurrentBalance(ethers.formatEther(newBalance));
       });
 
-      setAccoutnBalance(ethers.formatEther(balance));
+      setCurrentBalance(ethers.formatEther(balance));
     } catch (error) {
       console.log(error);
     }
   };
+  // player 1 begins game with his move
   const deployRPSContract = async () => {
     const newSalt = ethers.toBigInt(ethers.randomBytes(32)).toString();
     setsalt(newSalt);
@@ -66,7 +74,8 @@ function App() {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-
+      const balance = await provider.getBalance(currentAccount);
+      setStartingBalance(to2decimalPlaces(ethers.formatEther(balance)));
       const hasherContract = new ethers.Contract(
         hasherContractAddress,
         HasherABI,
@@ -110,12 +119,17 @@ function App() {
         Contract.abi,
         signer
       );
-
+      const balance = await provider.getBalance(currentAccount);
+      setStartingBalance(to2decimalPlaces(ethers.formatEther(balance)));
       const transaction = await contract.play(selectedMove, {
         value: ethers.parseEther(stakeForGame),
         estimateGas: 300000,
       });
       await transaction.wait();
+      const stake = await contract.stake();
+
+      setStakedAmount(ethers.formatEther(stake));
+
       setCanShowResultBTn(true);
       // If player1 does not respond to solve, call j1Timeout and get back stacked eth
       setTimeout(async () => {
@@ -131,6 +145,8 @@ function App() {
 
   function reset() {
     setsalt("");
+    setStartingBalance("");
+    setStakedAmount("");
     window.location.reload();
   }
   // player 1 - J1 invokes this function after J2 has played
@@ -144,6 +160,8 @@ function App() {
         Contract.abi,
         signer
       );
+      const stake = await contract.stake();
+      setStakedAmount(ethers.formatEther(stake));
       const tx = await contract.solve(selectedMove, salt, {
         estimateGas: 300000,
       });
@@ -156,17 +174,11 @@ function App() {
     }
   };
 
-  const getResultBalance = async () => {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const balance = await provider.getBalance(currentAccount);
-    setResultBalance(ethers.formatEther(balance));
-  };
-
   return (
     <>
-      {accountBalance && !resultBalance && (
+      {currentBalance && (
         <header className="header">
-          Account balance: {accountBalance} ETH
+          Account balance: {currentBalance} ETH
         </header>
       )}
 
@@ -175,38 +187,29 @@ function App() {
         {rpsContractAddress.length > 0 && (
           <>
             <p>Active Game address: {rpsContractAddress} </p>
-            <PingContract contractAddress={rpsContractAddress} />
-            {!joinGameAddress && selectedMove && (
-              <>
-                <button onClick={solve}>Solve</button>
-                <small>Make sure Player 2 has completed move</small>
-              </>
-            )}
-            {canShowResultBtn && !showResult && (
-              <>
-                <button
-                  onClick={() => {
-                    setShowResult(true);
-                    setSelectedMove(null);
-                    getResultBalance();
-                  }}
-                >
-                  Show result
-                </button>
-                <small>Make sure game is completed by both players</small>
-              </>
-            )}
-            {/* {resultBalance && showResult && (
+            <PingContract
+              contractAddress={rpsContractAddress}
+              setIsGameSolved={setIsGameSolved}
+              setIsWaitingForPlayer1ToSolve={setIsWaitingForPlayer1ToSolve}
+            />
+            {!joinGameAddress &&
+              isWaitingForPlayer1ToSolve &&
+              !isGameSolved && (
+                <>
+                  <button onClick={solve}>Solve</button>
+                </>
+              )}
+
+            {isGameSolved && (
               <header>
-                <p className="header">Account balance: {resultBalance} ETH</p>
                 <Winner
-                  currentBalance={resultBalance}
-                  prevBalance={accountBalance}
-                  stake={stakeForGame}
+                  currentBalance={currentBalance}
+                  prevBalance={startingBalance}
+                  stake={stakedAmount}
                 />
                 <button onClick={reset}>Close and start new game</button>
               </header>
-            )} */}
+            )}
           </>
         )}
       </div>
