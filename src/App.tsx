@@ -7,6 +7,7 @@ import { useLocalStorage } from "./hook/useLocalstorage";
 import MovePicker from "./components/MovePicker";
 import { icons, names } from "./utils/fixtures";
 import Winner from "./components/Winner";
+import PingContract from "./components/PingContract";
 
 declare global {
   interface Window {
@@ -26,6 +27,7 @@ function App() {
   const [rpsContractAddress, setRpsContractAddress] = useState("");
   const [salt, setsalt] = useLocalStorage("salt", "");
   const [stakeForGame, setStakeForGame] = useState("");
+
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -43,6 +45,11 @@ function App() {
       setCurrentAccount(accounts[0]);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const balance = await provider.getBalance(accounts[0]);
+      provider.on("block", async () => {
+        const newBalance = await provider.getBalance(accounts[0]);
+        setAccoutnBalance(ethers.formatEther(newBalance));
+      });
+
       setAccoutnBalance(ethers.formatEther(balance));
     } catch (error) {
       console.log(error);
@@ -70,6 +77,7 @@ function App() {
       const contract = await factory.deploy(c1Hashed, otherPlayerAddress, {
         value: ethers.parseEther(stakeForGame),
       });
+      await contract.waitForDeployment();
       const rpsAddress = await contract.getAddress();
       console.log("RPS contract deployed at: ", rpsAddress);
       setRpsContractAddress(rpsAddress);
@@ -81,6 +89,7 @@ function App() {
           Contract.abi,
           signer
         );
+
         const tx = await rpsContract.j2Timeout();
         await tx.wait();
         reset();
@@ -166,7 +175,7 @@ function App() {
         {rpsContractAddress.length > 0 && (
           <>
             <p>Active Game address: {rpsContractAddress} </p>
-
+            <PingContract contractAddress={rpsContractAddress} />
             {!joinGameAddress && selectedMove && (
               <>
                 <button onClick={solve}>Solve</button>
@@ -187,7 +196,7 @@ function App() {
                 <small>Make sure game is completed by both players</small>
               </>
             )}
-            {resultBalance && showResult && (
+            {/* {resultBalance && showResult && (
               <header>
                 <p className="header">Account balance: {resultBalance} ETH</p>
                 <Winner
@@ -197,7 +206,7 @@ function App() {
                 />
                 <button onClick={reset}>Close and start new game</button>
               </header>
-            )}
+            )} */}
           </>
         )}
       </div>
