@@ -184,21 +184,15 @@ function App() {
 
       <h1>Rock paper scissors spock lizard</h1>
       <div className="read-the-docs">
-        {rpsContractAddress.length > 0 && (
+        {rpsContractAddress.length > 0 && isGameOn && (
           <>
             <p>Active Game address: {rpsContractAddress} </p>
             <PingContract
               contractAddress={rpsContractAddress}
+              currentAccount={currentAccount}
               setIsGameSolved={setIsGameSolved}
-              setIsWaitingForPlayer1ToSolve={setIsWaitingForPlayer1ToSolve}
+              solve={solve}
             />
-            {!joinGameAddress &&
-              isWaitingForPlayer1ToSolve &&
-              !isGameSolved && (
-                <>
-                  <button onClick={solve}>Solve</button>
-                </>
-              )}
 
             {isGameSolved && (
               <header>
@@ -245,6 +239,7 @@ function App() {
           <>
             {rpsContractAddress.length === 0 && !joinGameAddress && (
               <>
+                {/* player 1 */}
                 <MovePicker setSelectedMove={setSelectedMove} />
                 <label>Stake ETH amount: </label>
                 <input
@@ -258,6 +253,7 @@ function App() {
             )}
             {joinGameAddress && !canShowResultBtn && (
               <>
+                {/* player 2 */}
                 <MovePicker setSelectedMove={setSelectedMove} />
                 <label>Stake ETH amount: </label>
                 <input

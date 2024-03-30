@@ -13,9 +13,9 @@ export default function Winner({ prevBalance, currentBalance, stake }: Props) {
   let result: string;
   console.log(pastBalance, parsedCurrentBalance, parsedStake);
   if (parsedCurrentBalance > pastBalance) {
-    result = "You win !! ETH : " + parsedStake;
+    result = "You win !! ETH : " + parsedStake * 2;
   } else if (parsedCurrentBalance < pastBalance) {
-    result = "You lost :(    ETH : " + parsedStake / 2;
+    result = "You lost :(    ETH : " + parsedStake;
   } else {
     result = "Its a Tie ";
   }
