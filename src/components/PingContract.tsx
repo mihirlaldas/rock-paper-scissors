@@ -15,7 +15,6 @@ const initialData: ContractData = {
   j2: "",
   c2: null,
 };
-
 type Props = {
   contractAddress: string;
   setIsGameSolved: React.Dispatch<React.SetStateAction<boolean>>;
@@ -27,7 +26,6 @@ function PingContract({
   setIsWaitingForPlayer1ToSolve,
 }: Props) {
   const [data, setData] = useState<ContractData>(initialData);
-
   async function getData() {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -67,10 +65,10 @@ function PingContract({
   }, [isGameSolved]);
 
   return (
-    <div>
+    <div className="contract-data">
       <h3>Contract data:</h3>
-      <p>j1: {data.j1}</p>
-      <p>j2: {data.j2}</p>
+      <p> Player 1: {data.j1}</p>
+      <p>player 2: {data.j2}</p>
       <p>stake: {data.stake} ETH</p>
       <h3>Game status:</h3>
       {isWaitingForPlayer2 && (
