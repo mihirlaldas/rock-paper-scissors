@@ -13,5 +13,4 @@ You can find the smart contract here: https://github.com/clesaege/RPS/blob/maste
 
 ## Video Demo
 
-- [fast demo on hardhat local](https://youtu.be/DWcKYy0ZAQ8)
-- [sepolia demo](https://youtu.be/8CkyZpqjAs0)
+- [demo on sepolia testnet](https://youtu.be/DGmETK523Ss)
