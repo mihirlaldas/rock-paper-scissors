@@ -40,7 +40,6 @@ export async function invokeJ1Timeout() {
       const tx = await rpsContract.j1Timeout({ estimateGas: 300000 });
       await tx.wait();
     }
-    throw new Error("Stake is present, cannot execute j1Timeout");
   } catch (error) {
     alert("Error while invoking j1Timeout function :");
   }
