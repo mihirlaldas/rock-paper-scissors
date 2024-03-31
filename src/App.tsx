@@ -29,6 +29,7 @@ function App() {
   const [isGameSolved, setIsGameSolved] = useState(false);
   const [isWaitingForPlayer1ToSolve, setIsWaitingForPlayer1ToSolve] =
     useState(false);
+
   const [startingBalance, setStartingBalance] = useLocalStorage(
     "starting-balance",
     ""
@@ -144,10 +145,11 @@ function App() {
   };
 
   function reset() {
+    setIsGameOn(false);
+    window.location.reload();
     setsalt("");
     setStartingBalance("");
     setStakedAmount("");
-    window.location.reload();
   }
   // player 1 - J1 invokes this function after J2 has played
   const solve = async () => {
@@ -189,11 +191,13 @@ function App() {
             <p>Active Game address: {rpsContractAddress} </p>
             <PingContract
               contractAddress={rpsContractAddress}
-              currentAccount={currentAccount}
               setIsGameSolved={setIsGameSolved}
-              solve={solve}
+              setIsWaitingForPlayer1ToSolve={setIsWaitingForPlayer1ToSolve}
             />
-
+            {/* show solve btn to player 1 */}
+            {!joinGameAddress &&
+              isWaitingForPlayer1ToSolve &&
+              !isGameSolved && <button onClick={solve}>Solve</button>}
             {isGameSolved && (
               <header>
                 <Winner
