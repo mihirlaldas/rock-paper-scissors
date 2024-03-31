@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserProvider, Eip1193Provider, ethers } from "ethers";
 import Contract from "./utils/RPS.json";
 import Hasher from "./utils/Hasher.json";
@@ -41,7 +41,12 @@ function App() {
   );
 
   const [stakedAmount, setStakedAmount] = useLocalStorage("staked-amount", "");
-  async function isConnected() {
+
+  useEffect(() => {
+    loadAccountData();
+  }, []);
+
+  const loadAccountData = async () => {
     const { ethereum } = window;
 
     if (!ethereum) {
@@ -60,10 +65,8 @@ function App() {
       });
 
       setCurrentBalance(ethers.formatEther(balance));
-      return true;
     }
-    return false;
-  }
+  };
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -246,7 +249,7 @@ function App() {
         )}
       </div>
       <div className="card">
-        {!isConnected() && (
+        {!currentAccount && (
           <button onClick={connectWallet}>Connect Wallet</button>
         )}
         {currentAccount && !isGameOn && (
