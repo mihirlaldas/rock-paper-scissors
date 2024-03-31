@@ -6,7 +6,8 @@ import "./App.css";
 import { useLocalStorage } from "./hook/useLocalstorage";
 import MovePicker from "./components/MovePicker";
 import { icons, names } from "./utils/fixtures";
-import Winner from "./components/Winner";
+import Winner, { to2decimalPlaces } from "./components/Winner";
+import PingContract from "./components/PingContract";
 
 declare global {
   interface Window {
@@ -15,17 +16,54 @@ declare global {
 }
 function App() {
   const [currentAccount, setCurrentAccount] = useState("");
-  const [accountBalance, setAccoutnBalance] = useState("");
-  const [resultBalance, setResultBalance] = useState("");
-  const [otherPlayerAddress, setOtherPlayerAddress] = useState("");
+  const [currentBalance, setCurrentBalance] = useState("");
+  const [otherPlayerAddress, setOtherPlayerAddress] = useLocalStorage(
+    "other-player-address",
+    ""
+  );
   const [joinGameAddress, setJoinGameAddress] = useState("");
-  const [selectedMove, setSelectedMove] = useState<number | null>(null);
-  const [isGameOn, setIsGameOn] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [canShowResultBtn, setCanShowResultBTn] = useState(false);
-  const [rpsContractAddress, setRpsContractAddress] = useState("");
+  const [selectedMove, setSelectedMove] = useLocalStorage("selected-move", "");
+  const [isGameOn, setIsGameOn] = useLocalStorage("is-game-on", "");
+  const [rpsContractAddress, setRpsContractAddress] = useLocalStorage(
+    "rps-contract-address",
+    ""
+  );
+  const [isPlayer1, setIsPlayer1] = useLocalStorage("is-player-1", "");
   const [salt, setsalt] = useLocalStorage("salt", "");
   const [stakeForGame, setStakeForGame] = useState("");
+  const [isGameSolved, setIsGameSolved] = useState(false);
+  const [isWaitingForPlayer1ToSolve, setIsWaitingForPlayer1ToSolve] =
+    useState(false);
+
+  const [startingBalance, setStartingBalance] = useLocalStorage(
+    "starting-balance",
+    ""
+  );
+
+  const [stakedAmount, setStakedAmount] = useLocalStorage("staked-amount", "");
+  async function isConnected() {
+    const { ethereum } = window;
+
+    if (!ethereum) {
+      alert("Get MetaMask!");
+      return;
+    }
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.listAccounts();
+    if (accounts.length > 0) {
+      setCurrentAccount(accounts[0].address);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const balance = await provider.getBalance(accounts[0]);
+      provider.on("block", async () => {
+        const newBalance = await provider.getBalance(accounts[0]);
+        setCurrentBalance(ethers.formatEther(newBalance));
+      });
+
+      setCurrentBalance(ethers.formatEther(balance));
+      return true;
+    }
+    return false;
+  }
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -43,11 +81,17 @@ function App() {
       setCurrentAccount(accounts[0]);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const balance = await provider.getBalance(accounts[0]);
-      setAccoutnBalance(ethers.formatEther(balance));
+      provider.on("block", async () => {
+        const newBalance = await provider.getBalance(accounts[0]);
+        setCurrentBalance(ethers.formatEther(newBalance));
+      });
+
+      setCurrentBalance(ethers.formatEther(balance));
     } catch (error) {
       console.log(error);
     }
   };
+  // player 1 begins game with his move
   const deployRPSContract = async () => {
     const newSalt = ethers.toBigInt(ethers.randomBytes(32)).toString();
     setsalt(newSalt);
@@ -59,7 +103,8 @@ function App() {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-
+      const balance = await provider.getBalance(currentAccount);
+      setStartingBalance(to2decimalPlaces(ethers.formatEther(balance)));
       const hasherContract = new ethers.Contract(
         hasherContractAddress,
         HasherABI,
@@ -70,10 +115,10 @@ function App() {
       const contract = await factory.deploy(c1Hashed, otherPlayerAddress, {
         value: ethers.parseEther(stakeForGame),
       });
+      await contract.waitForDeployment();
       const rpsAddress = await contract.getAddress();
       console.log("RPS contract deployed at: ", rpsAddress);
       setRpsContractAddress(rpsAddress);
-
       // If player2 does not respond, call j2Timeout and get back stacked eth
       setTimeout(async () => {
         const rpsContract = new ethers.Contract(
@@ -81,9 +126,12 @@ function App() {
           Contract.abi,
           signer
         );
-        const tx = await rpsContract.j2Timeout();
-        await tx.wait();
-        reset();
+        const c2 = await rpsContract.c2();
+        if (!c2) {
+          const tx = await rpsContract.j2Timeout();
+          await tx.wait();
+          reset();
+        }
       }, 60000 * 5);
     } catch (error) {
       console.error("RPS contract deployment error:", error);
@@ -97,22 +145,30 @@ function App() {
 
     try {
       const contract = new ethers.Contract(
-        joinGameAddress,
+        rpsContractAddress,
         Contract.abi,
         signer
       );
+      const balance = await provider.getBalance(currentAccount);
+      setStartingBalance(to2decimalPlaces(ethers.formatEther(balance)));
+      const stake = await contract.stake();
 
       const transaction = await contract.play(selectedMove, {
-        value: ethers.parseEther(stakeForGame),
+        value: stake,
         estimateGas: 300000,
       });
       await transaction.wait();
-      setCanShowResultBTn(true);
+
+      setStakedAmount(ethers.formatEther(stake));
+
       // If player1 does not respond to solve, call j1Timeout and get back stacked eth
       setTimeout(async () => {
-        const tx = await contract.j1Timeout({ estimateGas: 300000 });
-        await tx.wait();
-        reset();
+        const contractStake = await contract.stake();
+        if (contractStake > 0) {
+          const tx = await contract.j1Timeout({ estimateGas: 300000 });
+          await tx.wait();
+          reset();
+        }
       }, 60000 * 5);
     } catch (error) {
       console.log("play funcation call error:", error);
@@ -121,8 +177,14 @@ function App() {
   };
 
   function reset() {
-    setsalt("");
+    setIsGameOn(false);
     window.location.reload();
+    setsalt("");
+    setStartingBalance("");
+    setStakedAmount("");
+    setRpsContractAddress("");
+    setIsPlayer1("");
+    setSelectedMove("");
   }
   // player 1 - J1 invokes this function after J2 has played
   const solve = async () => {
@@ -135,65 +197,47 @@ function App() {
         Contract.abi,
         signer
       );
+      const stake = await contract.stake();
+      setStakedAmount(ethers.formatEther(stake));
       const tx = await contract.solve(selectedMove, salt, {
         estimateGas: 300000,
       });
       await tx.wait();
       setSelectedMove(null);
-      setCanShowResultBTn(true);
     } catch (error) {
       console.log("error while function call to solve: ", error);
       alert("player 2 has not yet finished");
     }
   };
 
-  const getResultBalance = async () => {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const balance = await provider.getBalance(currentAccount);
-    setResultBalance(ethers.formatEther(balance));
-  };
-
   return (
     <>
-      {accountBalance && !resultBalance && (
+      {currentBalance && (
         <header className="header">
-          Account balance: {accountBalance} ETH
+          Account balance: {currentBalance} ETH
         </header>
       )}
 
       <h1>Rock paper scissors spock lizard</h1>
       <div className="read-the-docs">
-        {rpsContractAddress.length > 0 && (
+        {rpsContractAddress.length > 0 && isGameOn && (
           <>
             <p>Active Game address: {rpsContractAddress} </p>
-
-            {!joinGameAddress && selectedMove && (
-              <>
-                <button onClick={solve}>Solve</button>
-                <small>Make sure Player 2 has completed move</small>
-              </>
+            <PingContract
+              contractAddress={rpsContractAddress}
+              setIsGameSolved={setIsGameSolved}
+              setIsWaitingForPlayer1ToSolve={setIsWaitingForPlayer1ToSolve}
+            />
+            {/* show solve btn to player 1 */}
+            {isPlayer1 && isWaitingForPlayer1ToSolve && !isGameSolved && (
+              <button onClick={solve}>Solve</button>
             )}
-            {canShowResultBtn && !showResult && (
-              <>
-                <button
-                  onClick={() => {
-                    setShowResult(true);
-                    setSelectedMove(null);
-                    getResultBalance();
-                  }}
-                >
-                  Show result
-                </button>
-                <small>Make sure game is completed by both players</small>
-              </>
-            )}
-            {resultBalance && showResult && (
+            {isGameSolved && (
               <header>
-                <p className="header">Account balance: {resultBalance} ETH</p>
                 <Winner
-                  currentBalance={resultBalance}
-                  prevBalance={accountBalance}
-                  stake={stakeForGame}
+                  currentBalance={currentBalance}
+                  prevBalance={startingBalance}
+                  stake={stakedAmount}
                 />
                 <button onClick={reset}>Close and start new game</button>
               </header>
@@ -202,7 +246,7 @@ function App() {
         )}
       </div>
       <div className="card">
-        {!currentAccount && (
+        {!isConnected() && (
           <button onClick={connectWallet}>Connect Wallet</button>
         )}
         {currentAccount && !isGameOn && (
@@ -217,7 +261,14 @@ function App() {
                 setRpsContractAddress(e.target.value);
               }}
             />
-            <button onClick={() => setIsGameOn(true)}>Join</button>
+            <button
+              onClick={() => {
+                setIsGameOn(true);
+                setIsPlayer1(false);
+              }}
+            >
+              Join
+            </button>
             <h3>Create new game</h3>
             <input
               type="text"
@@ -225,14 +276,22 @@ function App() {
               placeholder="another player's address"
               onChange={(e) => setOtherPlayerAddress(e.target.value)}
             />
-            <button onClick={() => setIsGameOn(true)}>Create Game</button>
+            <button
+              onClick={() => {
+                setIsGameOn(true);
+                setIsPlayer1(true);
+              }}
+            >
+              Create Game
+            </button>
             <p>Only on ethereum testnet - Sepolia</p>
           </div>
         )}
-        {isGameOn && !showResult && (
+        {isGameOn && (
           <>
-            {rpsContractAddress.length === 0 && !joinGameAddress && (
+            {rpsContractAddress.length === 0 && isPlayer1 && (
               <>
+                {/* player 1 */}
                 <MovePicker setSelectedMove={setSelectedMove} />
                 <label>Stake ETH amount: </label>
                 <input
@@ -244,16 +303,11 @@ function App() {
                 <button onClick={deployRPSContract}>Submit your move</button>
               </>
             )}
-            {joinGameAddress && !canShowResultBtn && (
+            {rpsContractAddress && !isPlayer1 && !stakedAmount && (
               <>
+                {/* player 2 */}
                 <MovePicker setSelectedMove={setSelectedMove} />
-                <label>Stake ETH amount: </label>
-                <input
-                  type="number"
-                  value={stakeForGame}
-                  placeholder="example 0.05"
-                  onChange={(e) => setStakeForGame(e.target.value)}
-                />
+
                 <button onClick={p2Play}>Submit your move</button>
               </>
             )}
