@@ -126,10 +126,12 @@ function App() {
           Contract.abi,
           signer
         );
-
-        const tx = await rpsContract.j2Timeout();
-        await tx.wait();
-        reset();
+        const c2 = await rpsContract.c2();
+        if (!c2) {
+          const tx = await rpsContract.j2Timeout();
+          await tx.wait();
+          reset();
+        }
       }, 60000 * 5);
     } catch (error) {
       console.error("RPS contract deployment error:", error);
@@ -161,9 +163,12 @@ function App() {
 
       // If player1 does not respond to solve, call j1Timeout and get back stacked eth
       setTimeout(async () => {
-        const tx = await contract.j1Timeout({ estimateGas: 300000 });
-        await tx.wait();
-        reset();
+        const contractStake = await contract.stake();
+        if (contractStake > 0) {
+          const tx = await contract.j1Timeout({ estimateGas: 300000 });
+          await tx.wait();
+          reset();
+        }
       }, 60000 * 5);
     } catch (error) {
       console.log("play funcation call error:", error);
