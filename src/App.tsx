@@ -131,7 +131,7 @@ function App() {
         );
         const c2 = await rpsContract.c2();
         if (!c2) {
-          const tx = await rpsContract.j2Timeout();
+          const tx = await rpsContract.j2Timeout({ estimateGas: 300000 });
           await tx.wait();
           reset();
         }
@@ -230,6 +230,7 @@ function App() {
               contractAddress={rpsContractAddress}
               setIsGameSolved={setIsGameSolved}
               setIsWaitingForPlayer1ToSolve={setIsWaitingForPlayer1ToSolve}
+              reset={reset}
             />
             {/* show solve btn to player 1 */}
             {isPlayer1 && isWaitingForPlayer1ToSolve && !isGameSolved && (
