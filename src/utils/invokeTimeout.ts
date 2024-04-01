@@ -7,7 +7,6 @@ export async function invokeJ2Timeout() {
   const rpsContractAddress = localStorage
     .getItem("rps-contract-address")
     ?.replace(/['"]+/g, "") as string;
-  console.log(rpsContractAddress);
   const rpsContract = new ethers.Contract(
     rpsContractAddress,
     Contract.abi,
