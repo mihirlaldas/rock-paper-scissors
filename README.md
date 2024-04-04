@@ -1,6 +1,7 @@
 # Rock paper scissors spock lizard game on Ethereum
 
-https://rpssl.netlify.app/
+https://rpssl.netlify.app/ (only on sepolia test net)
+
 a web3 website to play this extended version of rock paper scissors .
 
 - It should allow a party to create a RPS game.
